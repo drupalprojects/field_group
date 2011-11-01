@@ -154,9 +154,6 @@ function field_group_ctools_plugin_api($owner, $api) {
  */
 function field_group_theme() {
   return array(
-    'horizontal_tabs' => array(
-      'render element' => 'element',
-    ),
     'multipage' => array(
       'render element' => 'element',
     ),
@@ -234,7 +231,7 @@ function field_group_field_attach_view_alter(&$element, $context) {
  */
 function field_group_field_group_formatter_info() {
 
-  return array(
+  $info = array(
     'form' => array(
       'div' => array(
         'label' => t('Div'),
@@ -261,18 +258,6 @@ function field_group_field_group_formatter_info() {
         'format_types' => array('open', 'closed'),
         'instance_settings' => array('description' => '', 'classes' => '', 'required_fields' => 1),
         'default_formatter' => 'closed',
-      ),
-      'htabs' => array(
-        'label' => ('Horizontal tabs group'),
-        'description' => t('This fieldgroup renders child groups in its own horizontal tabs wrapper.'),
-        'instance_settings' => array('classes' => ''),
-      ),
-      'htab' => array(
-        'label' => t('Horizontal tab item'),
-        'format_types' => array('open', 'closed'),
-        'description' => t('This fieldgroup renders the content in a fieldset, part of horizontal tabs group.'),
-        'default_formatter' => 'closed',
-        'instance_settings' => array('description' => '', 'classes' => '', 'required_fields' => 1),
       ),
       'multipage-group' => array(
         'label' => ('Multipage group'),
@@ -326,18 +311,6 @@ function field_group_field_group_formatter_info() {
         'instance_settings' => array('description' => '', 'classes' => ''),
         'default_formatter' => 'closed',
       ),
-      'htabs' => array(
-        'label' => ('Horizontal tabs group'),
-        'description' => t('This fieldgroup renders child groups in its own horizontal tabs wrapper.'),
-        'instance_settings' => array('classes' => ''),
-      ),
-      'htab' => array(
-        'label' => t('Horizontal tab item'),
-        'format_types' => array('open', 'closed'),
-        'description' => t('This fieldgroup renders the content in a fieldset, part of horizontal tabs group.'),
-        'instance_settings' => array('description' => '', 'classes' => ''),
-        'default_formatter' => 'closed',
-      ),
       'accordion' => array(
         'label' => t('Accordion group'),
         'description' => t('This fieldgroup renders child groups as jQuery accordion.'),
@@ -352,6 +325,38 @@ function field_group_field_group_formatter_info() {
       ),
     ),
   );
+
+  // Extra format types derived from elements provided by elements module.
+  if (module_exists('elements')) {
+
+    $info['form']['htabs'] = array(
+      'label' => ('Horizontal tabs group'),
+      'description' => t('This fieldgroup renders child groups in its own horizontal tabs wrapper.'),
+      'instance_settings' => array('classes' => ''),
+    );
+    $info['form']['htab'] = array(
+      'label' => t('Horizontal tab item'),
+      'format_types' => array('open', 'closed'),
+      'description' => t('This fieldgroup renders the content in a fieldset, part of horizontal tabs group.'),
+      'default_formatter' => 'closed',
+      'instance_settings' => array('description' => '', 'classes' => '', 'required_fields' => 1),
+    );
+    $info['display']['htabs'] = array(
+      'label' => ('Horizontal tabs group'),
+      'description' => t('This fieldgroup renders child groups in its own horizontal tabs wrapper.'),
+      'instance_settings' => array('classes' => ''),
+    );
+    $info['display']['htab'] = array(
+      'label' => t('Horizontal tab item'),
+      'format_types' => array('open', 'closed'),
+      'description' => t('This fieldgroup renders the content in a fieldset, part of horizontal tabs group.'),
+      'instance_settings' => array('description' => '', 'classes' => ''),
+      'default_formatter' => 'closed',
+    );
+
+  }
+
+  return $info;
 }
 
 /**
@@ -1064,11 +1069,7 @@ function field_group_field_group_format_summary($group) {
  * Implements hook_element_info().
  */
 function field_group_element_info() {
-  $types['horizontal_tabs'] = array(
-    '#theme_wrappers' => array('horizontal_tabs'),
-    '#default_tab' => '',
-    '#process' => array('form_process_horizontal_tabs'),
-  );
+  $types = array();
   $types['multipage'] = array(
     '#theme_wrappers' => array('multipage'),
     '#default_tab' => '',
@@ -1089,18 +1090,7 @@ function field_group_element_info() {
 function field_group_library() {
 
   $path = drupal_get_path('module', 'field_group');
-  // Horizontal Tabs.
-  $libraries['horizontal-tabs'] = array(
-    'title' => 'Horizontal Tabs',
-    'website' => 'http://drupal.org/node/323112',
-    'version' => '1.0',
-    'js' => array(
-      $path . '/horizontal-tabs/horizontal-tabs.js' => array(),
-    ),
-    'css' => array(
-      $path . '/horizontal-tabs/horizontal-tabs.css' => array(),
-    ),
-  );
+
   // Multipage Tabs.
   $libraries['multipage'] = array(
     'title' => 'Multipage',
@@ -1185,66 +1175,6 @@ function field_group_field_attach_rename_bundle($entity_type, $bundle_old, $bund
 }
 
 /**
- * Creates a group formatted as horizontal tabs.
- * This function will never be callable from within field_group rendering. Other
- * modules using #type horizontal_tabs will have the benefit of this processor.
- *
- * @param $element
- *   An associative array containing the properties and children of the
- *   fieldset.
- * @param $form_state
- *   The $form_state array for the form this horizontal tab widget belongs to.
- * @return
- *   The processed element.
- */
-function form_process_horizontal_tabs($element, &$form_state) {
-  // Inject a new fieldset as child, so that form_process_fieldset() processes
-  // this fieldset like any other fieldset.
-  $element['group'] = array(
-    '#type' => 'fieldset',
-    '#theme_wrappers' => array(),
-    '#parents' => $element['#parents'],
-  );
-
-  // The JavaScript stores the currently selected tab in this hidden
-  // field so that the active tab can be restored the next time the
-  // form is rendered, e.g. on preview pages or when form validation
-  // fails.
-  $name = implode('__', $element['#parents']);
-  if (isset($form_state['values'][$name . '__active_tab'])) {
-    $element['#default_tab'] = $form_state['values'][$name . '__active_tab'];
-  }
-  $element[$name . '__active_tab'] = array(
-    '#type' => 'hidden',
-    '#default_value' => $element['#default_tab'],
-    '#attributes' => array('class' => array('horizontal-tabs-active-tab')),
-  );
-
-  return $element;
-}
-
-/**
- * Returns HTML for an element's children fieldsets as horizontal tabs.
- *
- * @param $variables
- *   An associative array containing:
- *   - element: An associative array containing the properties and children of the
- *     fieldset. Properties used: #children.
- *
- * @ingroup themeable
- */
-function theme_horizontal_tabs($variables) {
-  $element = $variables['element'];
-  // Add required JavaScript and Stylesheet.
-  drupal_add_library('field_group', 'horizontal-tabs');
-
-  $output = '<h2 class="element-invisible">' . (!empty($element['#title']) ? $element['#title'] : t('Horizontal Tabs')) . '</h2>';
-  $output .= '<div class="horizontal-tabs-panes">' . $element['#children'] . '</div>';
-
-  return $output;
-}
-
-/**
  * Creates a group formatted as multipage.
  * This function will never be callable from within field_group rendering. Other
  * modules using #type multipage will have the benefit of this processor.
@@ -1253,7 +1183,7 @@ function theme_horizontal_tabs($variables) {
  *   An associative array containing the properties and children of the
  *   fieldset.
  * @param $form_state
- *   The $form_state array for the form this horizontal tab widget belongs to.
+ *   The $form_state array for the form this multipage tab widget belongs to.
  * @return
  *   The processed element.
  */
