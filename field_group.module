@@ -237,7 +237,7 @@ function field_group_field_group_formatter_info() {
         'label' => t('Div'),
         'description' => t('This fieldgroup renders the inner content in a simple div with the titel as legend.'),
         'format_types' => array('open', 'collapsible', 'collapsed'),
-        'instance_settings' => array('description' => '', 'show_label' => 1, 'label_element' => 'h3', 'effect' => 'none', 'speed' => 'fast', 'classes' => '', 'required_fields' => 1),
+        'instance_settings' => array('description' => '', 'show_label' => 1, 'label_element' => 'h3', 'effect' => 'none', 'speed' => 'fast', 'classes' => '', 'required_fields' => 1, 'id' => ''),
         'default_formatter' => 'open',
       ),
       'fieldset' => array(
@@ -398,15 +398,25 @@ function field_group_field_group_format_settings($group) {
     );
   }
 
+  if (isset($formatter['instance_settings']['id'])) {
+    $form['instance_settings']['id'] = array(
+      '#title' => t('ID'),
+      '#type' => 'textfield',
+      '#default_value' => isset($group->format_settings['instance_settings']['id']) ? $group->format_settings['instance_settings']['id'] : (isset($formatter['instance_settings']['id']) ? $formatter['instance_settings']['id'] : ''),
+      '#weight' => 3,
+      '#element_validate' => array('field_group_validate_id'),
+    );
+  }
   if (isset($formatter['instance_settings']['classes'])) {
     $form['instance_settings']['classes'] = array(
       '#title' => t('Extra CSS classes'),
       '#type' => 'textfield',
       '#default_value' => isset($group->format_settings['instance_settings']['classes']) ? $group->format_settings['instance_settings']['classes'] : (isset($formatter['instance_settings']['classes']) ? $formatter['instance_settings']['classes'] : ''),
-      '#weight' => 3,
+      '#weight' => 4,
       '#element_validate' => array('field_group_validate_css_class'),
     );
   }
+
   if (isset($formatter['instance_settings']['description'])) {
     $form['instance_settings']['description'] = array(
       '#title' => t('Description'),
@@ -561,7 +571,13 @@ function field_group_field_group_pre_render(& $element, &$group, & $form) {
   $form['#attached']['js'][] = 'misc/form.js';
   $form['#attached']['js'][] = 'misc/collapse.js';
 
-  $element['#id'] = $form['#entity_type'] . '_' . $form['#bundle'] . '_' . $view_mode . '_' . $group->group_name;
+  if (isset($group->format_settings['instance_settings']['id']) && !empty($group->format_settings['instance_settings']['id'])) {
+    $element['#id'] = $group->format_settings['instance_settings']['id'];
+  }
+  else {
+    $element['#id'] = $form['#entity_type'] . '_' . $form['#bundle'] . '_' . $view_mode . '_' . $group->group_name;
+  }
+
   $element['#weight'] = $group->weight;
 
   // Call the pre render function for the format type.
@@ -615,13 +631,13 @@ function field_group_pre_render_div(&$element, $group, &$form) {
 
   $group->classes .= " speed-$speed effect-$effect";
   if ($group->format_settings['formatter'] != 'open') {
-    $element['#prefix'] = '<div class="field-group-format ' . $group->classes . '">
+    $element['#prefix'] = '<div id="' . $element['#id'] . '" class="field-group-format ' . $group->classes . '">
       <' . $label_element . '><span class="field-group-format-toggler">' . check_plain(t($group->label)) . '</span></' . $label_element . '>
       <div class="field-group-format-wrapper" style="display: ' . ($group->collapsed ? 'none' : 'block') . ';">';
     $element['#suffix'] = '</div></div>';
   }
   else {
-    $element['#prefix'] = '<div class="field-group-format ' . $group->group_name . ' ' . $group->classes . '">';
+    $element['#prefix'] = '<div id="' . $element['#id'] . '" class="field-group-format ' . $group->group_name . ' ' . $group->classes . '">';
     if ($show_label) {
       $element['#prefix'] .= '<' . $label_element . '><span>' . check_plain(t($group->label)) . '</span></' . $label_element . '>';
     }
@@ -1276,6 +1292,8 @@ function field_group_info_groups($entity_type = NULL, $bundle = NULL, $view_mode
       $groups = $cached->data;
     }
     else {
+      drupal_static_reset('ctools_export_load_object');
+      drupal_static_reset('ctools_export_load_object_all');
       $groups = field_group_read_groups();
       cache_set('field_groups', $groups, 'cache_field');
     }
