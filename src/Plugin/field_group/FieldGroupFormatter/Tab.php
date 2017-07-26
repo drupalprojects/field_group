@@ -54,13 +54,6 @@ class Tab extends FieldGroupFormatterBase {
       $element['#open'] = TRUE;
     }
 
-    // Front-end and back-end on configuration will lead
-    // to vertical tabs nested in a separate vertical group.
-    if (!empty($this->group->parent_name)) {
-      $add['#group'] = $this->group->parent_name;
-      $add['#parents'] = array($add['#group']);
-    }
-
     if ($this->getSetting('required_fields')) {
       $element['#attached']['library'][] = 'field_group/formatter.tabs';
       $element['#attached']['library'][] = 'field_group/core';
