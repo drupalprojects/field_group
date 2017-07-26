@@ -18,12 +18,16 @@ class HtmlElement extends RenderElement {
   public function getInfo() {
     $class = get_class($this);
 
-    return array(
-      '#process' => array(
-        array($class, 'processHtmlElement'),
-      ),
-      '#theme_wrappers' => array('field_group_html_element'),
-    );
+    return [
+      '#process' => [
+        [$class, 'processGroup'],
+        [$class, 'processHtmlElement'],
+      ],
+      '#pre_render' => [
+        [$class, 'preRenderGroup'],
+      ],
+      '#theme_wrappers' => ['field_group_html_element'],
+    ];
   }
 
   /**

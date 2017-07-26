@@ -346,7 +346,7 @@ function field_group_field_group_build_pre_render_alter(& $element) {
   }
   // Remove all empty groups on the form.
   else {
-    field_group_remove_empty_form_groups($element, $groups, $element['#fieldgroups'], $element['#entity_type']);
+    field_group_remove_empty_form_groups($element, $groups, $element['#entity_type']);
   }
 
 }
