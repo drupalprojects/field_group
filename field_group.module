@@ -239,46 +239,7 @@ function field_group_entity_view_alter(&$build, EntityInterface $entity, EntityD
  * @return array
  */
 function field_group_form_process(array &$element) {
-  if (empty($element['#field_group_form_process'])) {
-    $element['#field_group_form_process'] = TRUE;
-    if (empty($element['#fieldgroups'])) {
-      return $element;
-    }
-
-    // Create all groups and keep a flat list of references to these groups.
-    $group_references = array();
-    foreach ($element['#fieldgroups'] as $group_name => $group) {
-      if (!isset($element[$group_name])) {
-        $element[$group_name] = [];
-      }
-      $group_references[$group_name] = &$element[$group_name];
-      $element[$group_name]['#group'] = empty($group->parent_name) ? $group->region : $group->parent_name;
-      foreach ($group->children as $child) {
-        $element[$child]['#group'] = $group_name;
-      }
-    }
-
-    foreach ($element['#fieldgroups'] as $group_name => $group) {
-      $field_group_element = &$element[$group_name];
-
-      // Let modules define their wrapping element.
-      // Note that the group element has no properties, only elements.
-      foreach (Drupal::moduleHandler()->getImplementations('field_group_pre_render') as $module) {
-        // The intention here is to have the opportunity to alter the
-        // elements, as defined in hook_field_group_formatter_info.
-        // Note, implement $element by reference!
-        $function = $module . '_field_group_pre_render';
-        $function($field_group_element, $group, $element);
-      }
-
-      // Allow others to alter the pre_render.
-      Drupal::moduleHandler()->alter('field_group_pre_render', $field_group_element, $group, $element);
-    }
-
-    // Allow others to alter the pre_rendered build.
-    Drupal::moduleHandler()->alter('field_group_build_pre_render', $element);
-  }
-
+  field_group_build_entity_groups($element, 'form');
   return $element;
 }
 
@@ -346,7 +307,7 @@ function field_group_field_group_build_pre_render_alter(& $element) {
   }
   // Remove all empty groups on the form.
   else {
-    field_group_remove_empty_form_groups($element, $groups, $element['#entity_type']);
+    field_group_remove_empty_form_groups('form', $element, $groups, $element['#fieldgroups'], $element['#entity_type']);
   }
 
 }
@@ -514,6 +475,10 @@ function field_group_fields_nest(&$element, &$vars = NULL, $context = NULL) {
         // If this is a group, we have to use a reference to keep the reference
         // list intact (but if it is a field we don't mind).
         $group_references[$parent_name][$child_name] = &$element[$child_name];
+
+        // Remove the #group property, otherwise core will move this element to the field layout region.
+        unset($group_references[$parent_name][$child_name]['#group']);
+
         $group_references[$parent_name]['#weight'] = $element['#fieldgroups'][$parent_name]->weight;
       }
 
@@ -756,37 +721,52 @@ function field_group_exists($group_name, $entity_type, $bundle, $context, $mode)
 /**
  * Remove empty groups on forms.
  *
+ * @param string $name
+ *   The name of current group.
  * @param array $element
  *   The element to check the empty state.
  * @param array $groups
- *   Array of group objects.
- * @param string $entity_type
- *   The entity type.
+ *   Array with group names.
+ * @param array $form_groups
+ *   Array with full group objects.
+ * @param $entity
+ *   Current entity type that is rendered.
  */
-function field_group_remove_empty_form_groups(& $element, $groups, $entity_type) {
+function field_group_remove_empty_form_groups($name, & $element, $groups, &$form_groups, $entity_type) {
 
-  $exceptions = ['user__account', 'comment__author'];
+  $exceptions = array('user__account', 'comment__author');
 
   $children = Element::children($element);
-  $empty_groups_indication = array_fill_keys($groups, TRUE);
+
+  $hasChildren = FALSE;
   if (count($children)) {
     foreach ($children as $childname) {
 
-      $exception = $entity_type . '__' . $childname;
-      $empty_element = !(isset($element[$childname]['#type']) || isset($element[$childname]['#markup']) || in_array($exception, $exceptions));
-
-      // If the element is not empty, and it has a group. Mark the group as not empty.
-      if (!$empty_element && isset($element[$childname]['#group'])) {
-        $empty_groups_indication[$element[$childname]['#group']] = FALSE;
+      if (in_array($childname, $groups)) {
+        field_group_remove_empty_form_groups($childname, $element[$childname], $groups, $form_groups, $entity_type);
       }
+      $exception = $entity_type . '__' . $childname;
+      $hasChildren = $hasChildren ? TRUE : (isset($element[$childname]['#type']) || isset($element[$childname]['#markup']) || in_array($exception, $exceptions));
 
     }
   }
 
-  // Set access to false for all empty groups.
-  $empty_groups = array_filter($empty_groups_indication);
-  foreach (array_keys($empty_groups) as $group_name) {
-    $element[$group_name]['#access'] = FALSE;
+  if (!$hasChildren) {
+
+    // Remove empty elements from the #fieldgroups.
+    if (empty($element) && isset($form_groups[$name]) && !is_array($form_groups[$name])) {
+      foreach ($form_groups as $group_name => $group) {
+        if (isset($group->children)) {
+          $group_children = array_flip($group->children);
+          if (isset($group_children[$name])) {
+            unset($form_groups[$group_name]->children[$group_children[$name]]);
+          }
+        }
+      }
+    }
+
+    $element['#access'] = FALSE;
+
   }
 
 }

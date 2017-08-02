@@ -34,6 +34,7 @@ class Tab extends FieldGroupFormatterBase {
       '#type' => 'details',
       '#title' => Html::escape($this->t($this->getLabel())),
       '#description' => $this->getSetting('description'),
+      '#group' => $this->group->parent_name,
     );
 
     if ($this->getSetting('id')) {
@@ -46,7 +47,7 @@ class Tab extends FieldGroupFormatterBase {
     $classes = $this->getClasses();
     if (!empty($classes)) {
       $element += array(
-        '#attributes' => array('class' => $classes),
+        '#attributes' => ['class' => $classes],
       );
     }
 
@@ -70,28 +71,28 @@ class Tab extends FieldGroupFormatterBase {
 
     $form = parent::settingsForm();
 
-    $form['formatter'] = array(
+    $form['formatter'] = [
       '#title' => $this->t('Default state'),
       '#type' => 'select',
       '#options' => array_combine($this->pluginDefinition['format_types'], $this->pluginDefinition['format_types']),
       '#default_value' => $this->getSetting('formatter'),
       '#weight' => -4,
-    );
+    ];
 
-    $form['description'] = array(
+    $form['description'] = [
       '#title' => $this->t('Description'),
       '#type' => 'textarea',
       '#default_value' => $this->getSetting('description'),
       '#weight' => -4,
-    );
+    ];
 
     if ($this->context == 'form') {
-      $form['required_fields'] = array(
+      $form['required_fields'] = [
         '#type' => 'checkbox',
         '#title' => $this->t('Mark group as required if it contains required fields.'),
         '#default_value' => $this->getSetting('required_fields'),
         '#weight' => 2,
-      );
+      ];
     }
 
     return $form;
@@ -101,10 +102,10 @@ class Tab extends FieldGroupFormatterBase {
    * {@inheritdoc}
    */
   public static function defaultContextSettings($context) {
-    $defaults = array(
+    $defaults = [
       'formatter' => 'closed',
       'description' => '',
-    ) + parent::defaultSettings($context);
+      ] + parent::defaultSettings($context);
 
     if ($context == 'form') {
       $defaults['required_fields'] = 1;
