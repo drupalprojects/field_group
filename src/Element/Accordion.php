@@ -18,12 +18,16 @@ class Accordion extends RenderElement {
   public function getInfo() {
     $class = get_class($this);
 
-    return array(
-      '#process' => array(
-        array($class, 'processAccordion'),
-      ),
-      '#theme_wrappers' => array('field_group_accordion'),
-    );
+    return [
+      '#process' => [
+        [$class, 'processGroup'],
+        [$class, 'processAccordion'],
+      ],
+      '#pre_render' => [
+        [$class, 'preRenderGroup'],
+      ],
+      '#theme_wrappers' => ['field_group_accordion'],
+    ];
   }
 
   /**
