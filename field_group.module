@@ -382,7 +382,13 @@ function field_group_build_entity_groups(&$vars, $context = 'view') {
   }
 
   // Nest the fields in the corresponding field groups.
-  field_group_fields_nest($element, $nest_vars, $context);
+  if ($context !== 'form' && isset($element['_field_layout'])) {
+    field_group_field_layout_fields_nest($element, $nest_vars, $context);
+  }
+  else {
+    field_group_fields_nest($element, $nest_vars, $context);
+  }
+
 
   // Allow others to alter the pre_rendered build.
   Drupal::moduleHandler()->alter('field_group_build_pre_render', $element);
@@ -398,11 +404,21 @@ function field_group_build_entity_groups(&$vars, $context = 'view') {
   }
 
   // Put groups inside content if we are rendering an entity_view.
+  $render_key = field_group_get_content_element_key($context);
   foreach ($element['#fieldgroups'] as $group) {
     if (!empty($element[$group->group_name])) {
-      $key = field_group_get_content_element_key($context);
-      if (isset($vars[$key])) {
-        $vars[$key][$group->group_name] = $element[$group->group_name];
+
+      if (isset($vars[$render_key])) {
+
+        // Field layout enabled? Place it in correct region of the _field_layout key.
+        if (isset($vars[$render_key]['_field_layout'])) {
+          $vars[$render_key]['_field_layout'][$group->region][$group->group_name] = $element[$group->group_name];
+        }
+        else {
+          $vars[$render_key][$group->group_name] = $element[$group->group_name];
+        }
+
+
       }
     }
   }
@@ -410,7 +426,7 @@ function field_group_build_entity_groups(&$vars, $context = 'view') {
 }
 
 /**
- * Recursive function to nest fields in the field groups.
+ * Nests all the fields in the field groups.
  *
  * This function will take out all the elements in the form and
  * place them in the correct container element, a fieldgroup.
@@ -465,6 +481,7 @@ function field_group_fields_nest(&$element, &$vars = NULL, $context = NULL) {
         $group_references[$parent_name][$child_name] = &$element[$child_name];
         unset($element[$child_name]);
       }
+
     }
     // Form being viewed
     else {
@@ -494,6 +511,69 @@ function field_group_fields_nest(&$element, &$vars = NULL, $context = NULL) {
     field_group_pre_render($group_references[$group_name], $group, $element);
   }
 
+}
+
+/**
+ * Nests all the fields in the field groups for entity display elements managed by field layout.
+ * @param $element
+ * @param null $vars
+ * @param null $context
+ */
+function field_group_field_layout_fields_nest(&$element, &$vars = NULL, $context = NULL) {
+
+  // Create all groups and keep a flat list of references to these groups.
+  $group_references = [];
+  foreach ($element['#fieldgroups'] as $group_name => $group) {
+    // Construct own weight, as some fields (for example preprocess fields) don't have weight set.
+    $element[$group_name] = [];
+    $group_references[$group_name] = &$element[$group_name];
+  }
+
+  // Loop through all children looking for those that are supposed to be
+  // in groups, and insert placeholder element for the new group field in the
+  // correct location within the form structure.
+  $element_clone = [];
+  foreach (Element::children($element['_field_layout']) as $region_name) {
+
+    foreach (Element::children($element['_field_layout'][$region_name]) as $child_name) {
+      $element_clone['_field_layout'][$region_name][$child_name] = $element['_field_layout'][$region_name][$child_name];
+      // If this element is in a group, create the placeholder element.
+      if (isset($element['_field_layout'][$region_name]['#group_children'][$child_name])) {
+        $element_clone['_field_layout'][$region_name][$element['#group_children'][$child_name]] = [];
+      }
+    }
+
+  }
+
+  $element = array_merge($element_clone, $element);
+
+  // Move all children to their parents. Use the flat list of references for
+  // direct access as we don't know where in the root_element hierarchy the
+  // parent currently is situated.
+  foreach ($element['#group_children'] as $child_name => $group_name) {
+
+    $region = $element['#fieldgroups'][$group_name]->region;
+
+    // If not a group, check the content variable for empty field.
+    $key = field_group_get_content_element_key($context);
+    if (!isset($element['#fieldgroups'][$child_name]) && isset($vars[$key]['_field_layout'][$region][$child_name])) {
+      $group_references[$group_name][$child_name] = $vars[$key]['_field_layout'][$region][$child_name];
+      unset($vars[$key]['_field_layout'][$region][$child_name]);
+    }
+    // If this is a group, we have to use a reference to keep the reference
+    // list intact (but if it is a field we don't mind).
+    else {
+      $group_references[$group_name][$child_name] = &$element[$child_name];
+      unset($element[$child_name]);
+    }
+
+  }
+
+  // Bring extra element wrappers to achieve a grouping of fields.
+  // This will mainly be prefix and suffix altering.
+  foreach ($element['#fieldgroups'] as $group_name => $group) {
+    field_group_pre_render($group_references[$group_name], $group, $element);
+  }
 }
 
 /**

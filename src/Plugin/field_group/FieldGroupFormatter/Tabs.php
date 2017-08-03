@@ -54,12 +54,35 @@ class Tabs extends FieldGroupFormatterBase {
         '#type' => 'vertical_tabs',
         '#theme_wrappers' => array('vertical_tabs'),
       );
+
+      // View is not getting processed anymore.
+      if ($this->context === 'view') {
+        $form_state = new FormState();
+        $complete_form = array();
+        $element = VerticalTabs::processVerticalTabs($element, $form_state, $complete_form);
+      }
+
     }
     else {
       $element += array(
         '#type' => 'horizontal_tabs',
         '#theme_wrappers' => array('horizontal_tabs'),
       );
+
+      // View is not getting processed anymore.
+      if ($this->context === 'view') {
+        $form_state = new FormState();
+        $complete_form = array();
+        $element = HorizontalTabs::processHorizontalTabs($element, $form_state, $complete_form);
+      }
+
+    }
+
+    if ($this->context === 'view') {
+      // Make sure the group has 1 child. This is needed to succeed at form_pre_render_vertical_tabs().
+      // Skipping this would force us to move all child groups to this array, making it an un-nestable.
+      $element['group']['#groups'][$this->group->group_name] = [0 => []];
+      $element['group']['#groups'][$this->group->group_name]['#group_exists'] = TRUE;
     }
 
     // Search for a tab that was marked as open. First one wins.
