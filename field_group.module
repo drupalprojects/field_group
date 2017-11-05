@@ -13,6 +13,7 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\ConfirmFormInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\Element;
+use Drupal\field_group\Element\VerticalTabs;
 
 require_once __DIR__ . '/includes/helpers.inc';
 
@@ -114,6 +115,28 @@ function field_group_theme_suggestions_alter(array &$suggestions, array $variabl
       break;
   }
 
+}
+
+/**
+ * Implements hook_element_info_alter().
+ */
+function field_group_element_info_alter(array &$info) {
+
+  // Core does not support #group options on vertical tabs. Add support for it.
+  if (isset($info['vertical_tabs'])) {
+
+    if (!isset($info['vertical_tabs']['#process'])) {
+      $info['vertical_tabs']['#process'] = [];
+    }
+
+    if (!isset($info['vertical_tabs']['#pre_render'])) {
+      $info['vertical_tabs']['#pre_render'] = [];
+    }
+
+    $info['vertical_tabs']['#process'][] = [VerticalTabs::class, 'processGroup'];
+    $info['vertical_tabs']['#pre_render'][] = [VerticalTabs::class, 'preRenderGroup'];
+
+  }
 }
 
 /**
@@ -232,6 +255,15 @@ function field_group_entity_view_alter(&$build, EntityInterface $entity, EntityD
 }
 
 /**
+ * Pre render callback for rendering groups.
+ * @param $element Form that is being rendered.
+ * @deprecated Use field_group_form_process instead.
+ */
+function field_group_form_pre_render($element) {
+  field_group_form_process($element);
+}
+
+/**
  * Process callback for field groups.
  *
  * @param array $element Form that is being processed.
@@ -251,10 +283,19 @@ function field_group_form_process(array &$element) {
       if (!isset($element[$group_name])) {
         $element[$group_name] = [];
       }
+
+      $group_parents = $element['#array_parents'];
+      $group_parents[] = empty($group->parent_name) ? $group->region : $group->parent_name;
       $group_references[$group_name] = &$element[$group_name];
-      $element[$group_name]['#group'] = empty($group->parent_name) ? $group->region : $group->parent_name;
+      $element[$group_name]['#group'] = implode('][', $group_parents);
+
+      // Use array parents to set the group name. This will cover multilevel forms (eg paragraphs).
+      $parents = $element['#array_parents'];
+      $parents[] = $group_name;
+      $element[$group_name]['#parents'] = $parents;
+      $group_children_parent_group = implode('][', $parents);
       foreach ($group->children as $child) {
-        $element[$child]['#group'] = $group_name;
+        $element[$child]['#group'] = $group_children_parent_group;
       }
     }
 
@@ -375,6 +416,7 @@ function field_group_attach_groups(&$element, $context) {
       $group_children[$child] = $group_name;
     }
   }
+
   $element['#group_children'] = $group_children;
   $element['#entity_type'] = $entity_type;
 
