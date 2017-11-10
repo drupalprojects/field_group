@@ -304,20 +304,20 @@ function field_group_form_process(array &$element) {
 
       // Let modules define their wrapping element.
       // Note that the group element has no properties, only elements.
-      foreach (Drupal::moduleHandler()->getImplementations('field_group_pre_render') as $module) {
+      foreach (Drupal::moduleHandler()->getImplementations('field_group_form_process') as $module) {
         // The intention here is to have the opportunity to alter the
         // elements, as defined in hook_field_group_formatter_info.
         // Note, implement $element by reference!
-        $function = $module . '_field_group_pre_render';
+        $function = $module . '_field_group_form_process';
         $function($field_group_element, $group, $element);
       }
 
       // Allow others to alter the pre_render.
-      Drupal::moduleHandler()->alter('field_group_pre_render', $field_group_element, $group, $element);
+      Drupal::moduleHandler()->alter('field_group_form_process', $field_group_element, $group, $element);
     }
 
-    // Allow others to alter the pre_rendered build.
-    Drupal::moduleHandler()->alter('field_group_build_pre_render', $element);
+    // Allow others to alter the complete processed build.
+    Drupal::moduleHandler()->alter('field_group_form_process_build', $element);
   }
 
   return $element;
@@ -331,6 +331,32 @@ function field_group_form_process(array &$element) {
 function field_group_entity_view_pre_render($element) {
   field_group_build_entity_groups($element, 'view');
   return $element;
+}
+
+/**
+ * Implements hook_field_group_form_process().
+ */
+function field_group_field_group_form_process(&$element, &$group, &$complete_form) {
+
+  // Add all field_group format types to the js settings.
+  $element['#attached']['drupalSettings']['field_group'] = array(
+    $group->format_type => [
+      'mode' => $group->mode,
+      'context' => $group->context,
+      'settings' => $group->format_settings,
+    ],
+  );
+
+  $element['#weight'] = $group->weight;
+
+  // Call the pre render function for the format type.
+  $manager = Drupal::service('plugin.manager.field_group.formatters');
+  $plugin = $manager->getInstance(array(
+    'format_type' => $group->format_type,
+    'configuration' => array('label' => $group->label, 'settings' => $group->format_settings),
+    'group' => $group,
+  ));
+  $plugin->process($element, $complete_form);
 }
 
 /**
@@ -364,7 +390,15 @@ function field_group_field_group_pre_render(&$element, &$group, &$rendering_obje
     'group' => $group,
   ));
   $plugin->preRender($element, $rendering_object);
+}
 
+/**
+ * Implements hook_field_group_form_process_build_alter().
+ * @param Array $elements by address.
+ */
+function field_group_field_group_form_process_build_alter(&$element) {
+  $groups = array_keys($element['#fieldgroups']);
+  field_group_remove_empty_form_groups($element, $groups, $element['#entity_type']);
 }
 
 /**
@@ -423,61 +457,48 @@ function field_group_attach_groups(&$element, $context) {
 }
 
 /**
- * Preprocess/ Pre-render callback.
+ * Pre-render callback for entity views.
  *
- * @see field_group_form_process()
  * @see field_group_theme_registry_alter
  * @see field_group_fields_nest()
- * @param $vars preprocess vars or form element
+ * @param $vars preprocess vars
  * @param $context The display context (entity type, form or view)
  * @return $element Array with re-arranged fields in groups.
  */
 function field_group_build_entity_groups(&$vars, $context = 'view') {
 
-  if ($context == 'form') {
-    $element = &$vars;
-    $nest_vars = NULL;
+  if (isset($vars['elements'])) {
+    $element = &$vars['elements'];
+  }
+  elseif (isset($vars['content'])) {
+    $element = &$vars['content'];
   }
   else {
-    if (isset($vars['elements'])) {
-      $element = &$vars['elements'];
-    }
-    elseif (isset($vars['content'])) {
-      $element = &$vars['content'];
+    if ($context === 'eck_entity') {
+      $element = &$vars['entity'];
     }
     else {
-      if ($context === 'eck_entity') {
-        $element = &$vars['entity'];
-      }
-      else {
-        $element = &$vars;
-      }
+      $element = &$vars;
     }
-
-    $nest_vars = &$vars;
   }
+
+  $nest_vars = &$vars;
 
   // No groups on the entity.
   if (empty($element['#fieldgroups'])) {
     return $element;
   }
 
-  // Nest the fields in the corresponding field groups.
-  if ($context !== 'form' && isset($element['_field_layout'])) {
+  // Use other nest function if field layout is active.
+  if (isset($element['_field_layout'])) {
     field_group_field_layout_fields_nest($element, $nest_vars, $context);
   }
   else {
     field_group_fields_nest($element, $nest_vars, $context);
   }
 
-
   // Allow others to alter the pre_rendered build.
   Drupal::moduleHandler()->alter('field_group_build_pre_render', $element);
-
-  // Return the element on forms.
-  if ($context == 'form') {
-    return $element;
-  }
 
   // No groups on the entity. Prerender removed empty field groups.
   if (empty($element['#fieldgroups'])) {

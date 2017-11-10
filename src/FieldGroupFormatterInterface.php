@@ -12,6 +12,18 @@ use Drupal\Component\Plugin\PluginInspectionInterface;
 interface FieldGroupFormatterInterface extends PluginInspectionInterface {
 
   /**
+   * Allows the field group formatter to manipulate the field group array and attach the formatters elements.
+   * The process method is called in the #process part of theme layer, and is currently used for forms.
+   * The preRender method is called in the #pre_render part of the theme layer, and is currently used for entity displays.
+   *
+   * @param array $element
+   *   The field group render array.
+   * @param object $processed_object
+   *   The object / entity beïng processed.
+   */
+  public function process(&$element, $processed_object);
+
+  /**
    * Allows the field group formatter to manipulate the field group array and attach the formatters rendering element.
    *
    * @param array $element

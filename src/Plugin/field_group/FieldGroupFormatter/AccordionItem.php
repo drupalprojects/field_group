@@ -28,14 +28,14 @@ class AccordionItem extends FieldGroupFormatterBase {
   /**
    * {@inheritdoc}
    */
-  public function preRender(&$element, $rendering_object) {
-    parent::preRender($element, $rendering_object);
+  public function process(&$element, $processed_object) {
+
+    // Keep using preRender parent for BC.
+    parent::preRender($element, $processed_object);
 
     $element += array(
-      '#type' => 'field_group_accordion_item',
-      '#open' => $this->getSetting('formatter') == 'open' ? TRUE : FALSE,
-      '#description' => $this->getSetting('description'),
-      '#title' => Drupal::translation()->translate($this->getLabel()),
+      '#type' => 'field_group_accordion',
+      '#effect' => $this->getSetting('effect'),
     );
 
     if ($this->getSetting('id')) {
@@ -45,10 +45,6 @@ class AccordionItem extends FieldGroupFormatterBase {
     $classes = $this->getClasses();
     if (!empty($classes)) {
       $element += array('#attributes' => array('class' => $classes));
-    }
-
-    if ($this->getSetting('required_fields')) {
-      $element['#attached']['library'][] = 'field_group/formatter.details';
     }
 
   }

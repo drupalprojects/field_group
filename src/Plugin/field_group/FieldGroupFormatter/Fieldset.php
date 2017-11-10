@@ -23,7 +23,10 @@ class Fieldset extends FieldGroupFormatterBase {
   /**
    * {@inheritdoc}
    */
-  public function preRender(&$element, $rendering_object) {
+  public function process(&$element, $processed_object) {
+
+    // Keep using preRender parent for BC.
+    parent::preRender($element, $processed_object);
 
     $element += array(
       '#type' => 'fieldset',
@@ -56,6 +59,7 @@ class Fieldset extends FieldGroupFormatterBase {
       $element['#attached']['library'][] = 'field_group/formatter.fieldset';
       $element['#attached']['library'][] = 'field_group/core';
     }
+
   }
 
   /**
