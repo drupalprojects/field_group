@@ -69,6 +69,14 @@ class Tab extends FieldGroupFormatterBase {
   /**
    * {@inheritdoc}
    */
+  public function preRender(&$element, $rendering_object) {
+    parent::preRender($element, $rendering_object);
+    $this->process($element, $rendering_object);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function settingsForm() {
 
     $form = parent::settingsForm();
