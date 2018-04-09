@@ -32,13 +32,13 @@ class Tabs extends FieldGroupFormatterBase {
     // Keep using preRender parent for BC.
     parent::preRender($element, $processed_object);
 
-    $element += array(
-      '#prefix' => '<div class="' . implode(' ' , $this->getClasses()) . '">',
+    $element += [
+      '#prefix' => '<div class=" ' . implode(' ' , $this->getClasses()) . '">',
       '#suffix' => '</div>',
       '#tree' => TRUE,
-      '#parents' => array($this->group->group_name),
+      '#parents' => [$this->group->group_name],
       '#default_tab' => '',
-    );
+    ];
 
     if ($this->getSetting('id')) {
       $element['#id'] = Html::getId($this->getSetting('id'));
@@ -96,16 +96,16 @@ class Tabs extends FieldGroupFormatterBase {
 
     $form = parent::settingsForm();
 
-    $form['direction'] = array(
+    $form['direction'] = [
       '#title' => $this->t('Direction'),
       '#type' => 'select',
-      '#options' => array(
+      '#options' => [
         'vertical' => $this->t('Vertical'),
         'horizontal' => $this->t('Horizontal'),
-      ),
+      ],
       '#default_value' => $this->getSetting('direction'),
       '#weight' => 1,
-    );
+    ];
 
     return $form;
   }
@@ -117,7 +117,7 @@ class Tabs extends FieldGroupFormatterBase {
 
     $summary = parent::settingsSummary();
     $summary[] = $this->t('Direction: @direction',
-      array('@direction' => $this->getSetting('direction'))
+      ['@direction' => $this->getSetting('direction')]
     );
 
     return $summary;
@@ -127,9 +127,9 @@ class Tabs extends FieldGroupFormatterBase {
    * {@inheritdoc}
    */
   public static function defaultContextSettings($context) {
-    return array(
+    return [
       'direction' => 'vertical',
-    ) + parent::defaultContextSettings($context);
+    ] + parent::defaultContextSettings($context);
   }
 
   /**

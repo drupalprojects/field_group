@@ -50,7 +50,7 @@ class Accordion extends RenderElement {
     // Add the effect class.
     if (isset($element['#effect'])) {
       if (!isset($element['#attributes']['class'])) {
-        $element['#attributes']['class'] = array();
+        $element['#attributes']['class'] = [];
       }
       $element['#attributes']['class'][] = 'effect-' . $element['#effect'];
     }

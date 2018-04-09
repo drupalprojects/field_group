@@ -25,11 +25,11 @@ class Details extends FieldGroupFormatterBase {
    */
   public function process(&$element, $processed_object) {
 
-    $element += array(
+    $element += [
       '#type' => 'details',
       '#title' => Html::escape($this->t($this->getLabel())),
       '#open' => $this->getSetting('open')
-    );
+    ];
 
     if ($this->getSetting('id')) {
       $element['#id'] = Html::getId($this->getSetting('id'));
@@ -37,15 +37,15 @@ class Details extends FieldGroupFormatterBase {
 
     $classes = $this->getClasses();
     if (!empty($classes)) {
-      $element += array(
-        '#attributes' => array('class' => $classes),
-      );
+      $element += [
+        '#attributes' => ['class' => $classes],
+      ];
     }
 
     if ($this->getSetting('description')) {
-      $element += array(
+      $element += [
         '#description' => $this->getSetting('description'),
-      );
+      ];
     }
 
     if ($this->getSetting('required_fields')) {
@@ -69,19 +69,19 @@ class Details extends FieldGroupFormatterBase {
   public function settingsForm() {
     $form = parent::settingsForm();
 
-    $form['open'] = array(
+    $form['open'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Display element open by default.'),
       '#default_value' => $this->getSetting('open'),
-    );
+    ];
 
     if ($this->context == 'form') {
-      $form['required_fields'] = array(
+      $form['required_fields'] = [
         '#type' => 'checkbox',
         '#title' => $this->t('Mark group as required if it contains required fields.'),
         '#default_value' => $this->getSetting('required_fields'),
         '#weight' => 2,
-      );
+      ];
     }
 
     return $form;
@@ -92,7 +92,7 @@ class Details extends FieldGroupFormatterBase {
    */
   public function settingsSummary() {
 
-    $summary = array();
+    $summary = [];
     if ($this->getSetting('open')) {
       $summary[] = $this->t('Default state open');
     }
@@ -111,10 +111,10 @@ class Details extends FieldGroupFormatterBase {
    * {@inheritdoc}
    */
   public static function defaultContextSettings($context) {
-    $defaults = array(
+    $defaults = [
       'open' => FALSE,
       'required_fields' => $context == 'form',
-    ) + parent::defaultSettings($context);
+    ] + parent::defaultSettings($context);
 
     if ($context == 'form') {
       $defaults['required_fields'] = 1;

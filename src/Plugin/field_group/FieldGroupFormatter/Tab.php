@@ -32,12 +32,12 @@ class Tab extends FieldGroupFormatterBase {
     // Keep using preRender parent for BC.
     parent::preRender($element, $processed_object);
 
-    $add = array(
+    $add = [
       '#type' => 'details',
       '#title' => Html::escape($this->t($this->getLabel())),
       '#description' => $this->getSetting('description'),
       '#group' => $this->group->parent_name,
-    );
+    ];
 
     if ($this->getSetting('id')) {
       $add['#id'] = Html::getId($this->getSetting('id'));
@@ -48,9 +48,9 @@ class Tab extends FieldGroupFormatterBase {
 
     $classes = $this->getClasses();
     if (!empty($classes)) {
-      $element += array(
+      $element += [
         '#attributes' => ['class' => $classes],
-      );
+      ];
     }
 
     if ($this->getSetting('formatter') == 'open') {
@@ -115,7 +115,7 @@ class Tab extends FieldGroupFormatterBase {
     $defaults = [
       'formatter' => 'closed',
       'description' => '',
-      ] + parent::defaultSettings($context);
+    ] + parent::defaultSettings($context);
 
     if ($context == 'form') {
       $defaults['required_fields'] = 1;
